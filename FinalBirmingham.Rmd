@@ -1,0 +1,289 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(corrplot)
+library(dplyr)
+library(ggpubr)
+library(reshape2)
+library(ggmap)
+library(maps)
+library(mapdata)
+library(fuzzyjoin)
+library(carData)
+library(scales)
+```
+
+```{r}
+data('MplsStops', package='carData')
+df = MplsStops
+```
+
+```{r}
+df$policePrecinct = as.factor(df$policePrecinct)
+str(df)
+```
+
+```{r}
+head(df)
+```
+
+```{r}
+attach(df)
+table(problem)
+table(MDC)
+table(citationIssued)
+table(personSearch)
+table(vehicleSearch)
+table(preRace)
+table(race)
+table(gender)
+table(policePrecinct)
+```
+
+```{r}
+names(df)
+table(policePrecinct, problem)
+table(policePrecinct, citationIssued)
+table(policePrecinct, personSearch)
+table(policePrecinct, vehicleSearch)
+```
+
+```{r fig.width=9, fig.height=13}
+names(df)
+table(policePrecinct, preRace)
+table(policePrecinct, race)
+```
+
+```{r}
+ftable(policePrecinct, gender, personSearch)
+```
+
+```{r}
+ftable(policePrecinct, gender, citationIssued)
+```
+
+```{r}
+prop.table(table(problem))
+prop.table(table(MDC))
+prop.table(table(citationIssued))
+prop.table(table(personSearch))
+prop.table(table(vehicleSearch))
+prop.table(table(preRace))
+prop.table(table(race))
+prop.table(table(gender))
+prop.table(table(policePrecinct))
+```
+
+```{r fig.width=9, fig.height=13}
+attach(df)
+prop.table(table(problem, citationIssued))
+prop.table(table(problem, personSearch))
+prop.table(table(problem, vehicleSearch))
+
+probcit = ggplot(na.omit(df), aes(x = reorder(citationIssued, citationIssued))) +
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  ggtitle('Citations Issued') +
+  xlab(' ') +
+  scale_y_continuous(labels = scales::percent, name = 'Proportion') +
+  facet_grid(~ problem)
+probpers = ggplot(na.omit(df), aes(x = reorder(personSearch, personSearch))) +
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  ggtitle('Persons Searched') +
+  xlab(' ') +
+  scale_y_continuous(labels = scales::percent, name = 'Proportion') +
+  facet_grid(~ problem)
+probveh = ggplot(na.omit(df), aes(x = reorder(vehicleSearch, vehicleSearch))) +
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  ggtitle('Vehicle Searched') +
+  xlab(' ') +
+  scale_y_continuous(labels = scales::percent, name = 'Proportion') +
+  facet_grid(~ problem)
+ggarrange(probcit, probpers, probveh,
+          ncol = 1, nrow = 3)
+```
+
+```{r fig.width=9, fig.height=13}
+attach(df)
+prop.table(table(policePrecinct, problem))
+prop.table(table(policePrecinct, citationIssued))
+prop.table(table(policePrecinct, personSearch))
+prop.table(table(policePrecinct, vehicleSearch))
+
+polprob = ggplot(na.omit(df), aes(x = reorder(problem, problem))) +
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  ggtitle('Reason for Traffic Stop') +
+  xlab(' ') +
+  scale_y_continuous(labels = scales::percent, name = 'Proportion') +
+  facet_grid(~ policePrecinct)
+polcit = ggplot(na.omit(df), aes(x = reorder(citationIssued, citationIssued))) +
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  ggtitle('Citation Issued') +
+  xlab(' ') +
+  scale_y_continuous(labels = scales::percent, name = 'Proportion') +
+  facet_grid(~ policePrecinct)
+polper = ggplot(na.omit(df), aes(x = reorder(personSearch, personSearch))) +
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  ggtitle('Person Searched') +
+  xlab(' ') +
+  scale_y_continuous(labels = scales::percent, name = 'Proportion') +
+  facet_grid(~ policePrecinct)
+polveh = ggplot(na.omit(df), aes(x = reorder(vehicleSearch, vehicleSearch))) +
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  ggtitle('Vehicle Searched') +
+  xlab(' ') +
+  scale_y_continuous(labels = scales::percent, name = 'Proportion') +
+  facet_grid(~ policePrecinct)
+ggarrange(polprob, polcit, polper, polveh,
+          ncol = 1, nrow = 4)
+```
+
+```{r fig.height= 13, fig.width=8}
+attach(df)
+polprobdf = data.frame(table(policePrecinct, problem))
+polcitdf = data.frame(table(policePrecinct, citationIssued))
+polpersdf = data.frame(table(policePrecinct, personSearch))
+polvehdf = data.frame(table(policePrecinct, vehicleSearch))
+
+prop1 = ggplot(polprobdf, aes(fill=problem, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Reason for Traffic Stop') +
+  xlab(' ') +
+  ylab('Proportion')
+prop2 = ggplot(polcitdf, aes(fill=citationIssued, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Citation Issued') +
+  xlab(' ') +
+  ylab('Proportion')
+prop3 = ggplot(polpersdf, aes(fill=personSearch, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Driver Searched') +
+  xlab(' ') +
+  ylab('Proportion')
+prop4 = ggplot(polvehdf, aes(fill=vehicleSearch, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Vehicle Searched') +
+  xlab(' ') +
+  ylab('Proportion')
+
+ggarrange(prop1, prop2, prop3, prop4,
+          ncol = 1, nrow = 4)
+```
+
+```{r}
+ggplot(df, aes(fill=problem, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity')
+```
+
+```{r}
+attach(filter(df, df$gender == 'Female'))
+femalepp = data.frame(table(policePrecinct, problem))
+attach(filter(df, df$gender == 'Male'))
+malepp = data.frame(table(policePrecinct, problem))
+attach(filter(df, df$gender == 'Unknown'))
+unknownpp = data.frame(table(policePrecinct, problem))
+attach(filter(df, is.na(df$gender)))
+NApp = data.frame(table(policePrecinct, problem))
+
+gen1 = ggplot(femalepp, aes(fill=problem, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity')+
+  ggtitle('Traffic Stop Reasons: Female')
+gen2 = ggplot(malepp, aes(fill=problem, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Traffic Stop Reasons: Male')
+gen3 = ggplot(unknownpp, aes(fill=problem, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Traffic Stop Reasons: Unknown')
+gen4 = ggplot(NApp, aes(fill=problem, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Trafic Stop Reasons: N/A')
+```
+
+```{r}
+attach(filter(df, df$gender == 'Female'))
+femaleci = data.frame(table(policePrecinct, citationIssued))
+attach(filter(df, df$gender == 'Male'))
+maleci = data.frame(table(policePrecinct, citationIssued))
+attach(filter(df, df$gender == 'Unknown'))
+unknownci = data.frame(table(policePrecinct, citationIssued))
+attach(filter(df, is.na(df$gender)))
+NAci = data.frame(table(policePrecinct, citationIssued))
+
+gen5 = ggplot(femaleci, aes(fill=citationIssued, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity')+
+  ggtitle('Citation Issued: Female')
+gen6 = ggplot(maleci, aes(fill=citationIssued, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Citation Issued: Male')
+gen7 = ggplot(unknownci, aes(fill=citationIssued, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Citation Issued: Unknown')
+gen8 = ggplot(NAci, aes(fill=citationIssued, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Citation Issued: N/A')
+```
+
+```{r}
+attach(filter(df, df$gender == 'Female'))
+femaleds = data.frame(table(policePrecinct, personSearch))
+attach(filter(df, df$gender == 'Male'))
+maleds = data.frame(table(policePrecinct, personSearch))
+attach(filter(df, df$gender == 'Unknown'))
+unknownds = data.frame(table(policePrecinct, personSearch))
+attach(filter(df, is.na(df$gender)))
+NAds = data.frame(table(policePrecinct, personSearch))
+
+gen9 = ggplot(femaleds, aes(fill=personSearch, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity')+
+  ggtitle('Driver Searched: Female')
+gen10 = ggplot(maleds, aes(fill=personSearch, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Driver Searched: Male')
+gen11 = ggplot(unknownds, aes(fill=personSearch, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Driver Searched: Unknown')
+gen12 = ggplot(NAds, aes(fill=personSearch, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Driver Searched: N/A')
+```
+
+```{r}
+attach(filter(df, df$gender == 'Female'))
+femalevs = data.frame(table(policePrecinct, vehicleSearch))
+attach(filter(df, df$gender == 'Male'))
+malevs = data.frame(table(policePrecinct, vehicleSearch))
+attach(filter(df, df$gender == 'Unknown'))
+unknownvs = data.frame(table(policePrecinct, vehicleSearch))
+attach(filter(df, is.na(df$gender)))
+NAvs = data.frame(table(policePrecinct, vehicleSearch))
+
+gen13 = ggplot(femalevs, aes(fill=vehicleSearch, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity')+
+  ggtitle('Vehicle Searched: Female')
+gen14 = ggplot(malevs, aes(fill=vehicleSearch, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Vehicle Searched: Male')
+gen15 = ggplot(unknownvs, aes(fill=vehicleSearch, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Vehicle Searched: Unknown')
+gen16 = ggplot(NAvs, aes(fill=vehicleSearch, y=Freq, x=policePrecinct)) +
+  geom_bar(position='fill', stat='identity') +
+  ggtitle('Vehicle Searched: N/A')
+```
+
+```{r fig.height= 12, fig.width=16}
+ggarrange(gen1, gen2, gen3, gen4,
+          gen5, gen6, gen7, gen8,
+          gen9, gen10, gen11, gen12,
+          gen13, gen14, gen15, gen16,
+          ncol = 4, nrow = 4)
+```
+
